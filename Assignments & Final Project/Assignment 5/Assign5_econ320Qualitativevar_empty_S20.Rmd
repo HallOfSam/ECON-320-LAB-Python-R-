@@ -1,0 +1,135 @@
+---
+title: "Econ320 Assignment 5"
+author: "Saier (Sam) Hu"
+date: "4/29, 2021"
+output: 
+  html_document: 
+    theme: flatly
+    code_hiding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(wooldridge)
+library(tidyverse)
+library(stargazer)
+library(data.table)
+library(car)
+library(knitr)
+```
+
+## Regressions with Qualitative Information 
+
+1. Using the data wage2 from the wooldridge package. Estimate the models: m1, m2, m3, m4 
+
+Model 1 $$log(wage) = \beta_0 + \beta_1 educ + \beta_2 exper + \beta_3tenure + \beta_4 married + u $$
+Model 2  $$log(wage) = \beta_0 + \beta_1 educ + \beta_2 exper + \beta_3tenure + \beta_4 married + \beta_5 black + u $$
+Model 3  $$log(wage) = \beta_0 + \beta_1 educ + \beta_2 exper + \beta_3tenure + \beta_4 married + \beta_5 black + \beta_6 south + u $$ 
+Model 4  $$log(wage) = \beta_0 + \beta_1 educ + \beta_2 exper + \beta_3tenure + \beta_4 married + \beta_5 black + \beta_6 south + \beta_7 urban + u$$ 
+
+Report the results using a stargazer table. Holding other factors fixed what is the aproximate difference in monthly salary between blacks and non blacks, married vs single, urban vs rural?  Are these statistically significant? INTERPRET
+
+- The results are statistically significant. The wages of black people are 19.7% lower than those of non blacks; the wages of married people are 19%-20% higher than those of single people; the wages of urban residents are 18.4% higher than those of rural residents.
+
+```{r,  warning=FALSE}
+
+
+m1<-lm(log(wage)~ educ+exper+ tenure+ married, wage2)
+m2<-lm(log(wage)~ educ + exper + tenure + married + black, wage2)
+m3<-lm(log(wage)~ educ + exper + tenure + married + black + south, wage2)
+m4<-lm(log(wage)~ educ + exper + tenure + married + black + south +urban, wage2)
+  
+  # remember to pay attention to the results="asis" option and the type of your table
+stargazer(list(m1, m2, m3, m4), type = "text")
+
+```
+
+
+2. Using model 4 add the variables $exper^2$ and $tenure^2$ to the equation and test if they are jointly significant at 20% level? WHat about 25%?
+
+- The p-value of the F-test is about 0.226, which suggests that they are not jointly significant at 20% level; however, they are jointly significant at 25% level, because p-val  <α  and we can now reject the null hypothesis.
+
+```{r}
+#2
+    
+m5<-lm(log(wage)~ educ+exper+ tenure+ married+black +south + urban+ I(exper^2) + I(tenure^2) , wage2)
+myH0 <- c("I(exper^2)", "I(tenure^2)") # vector with the names of the variables that you are testing 
+linearHypothesis(m5, myH0)
+
+```
+
+
+3. Using model 4 and add dummy variable for age groups less than or equal to 30, between 30 to 35, older than 35. Do a frequency table using `kable()` showing the distribution of each group.  Make older than 35 the reference group, run a regression, what can you say about the effect of age group on the wages? Put the results in a stargarzer table.
+
+- The wage of people younger than 30 years old is 8% lower than that of people who are at least 35 years old.
+
+- The wage of people who are between 30 to 35 years old is 3.9% lower than that of people who are at least 35 years old.
+
+```{r, warning=FALSE}
+#3
+ageg<- c(0,30,35,38)
+wage2$agegr<-cut(wage2$age,ageg)
+
+kable(table(wage2$agegr), #caption = "Age groups", 
+      col.names = c("Age group", "Freq"))
+
+wage2$agegr <- relevel(wage2$agegr,"(35,38]")
+
+m6<- lm(log(wage)~ educ + exper + tenure + married + black + south +urban + agegr, wage2)
+
+stargazer(m6, type = "text", covariate.labels = c( "Education", "Experience", "Tenure", "Married", "Black", "South", "Urban", "Younger than 30", "Between 30-35"))
+```
+<br>
+4. Use model 4 but now allow wages to differ accross four groups of people, married and black, married and nonblack, single and black and single and non black. Put the results in a stargarzer table. (Hint: Think about how interactions work, what are all the categories in the interaction and what is the base category.) Do not create the interaction separate. Do it inside the `lm()` directly as learned in class. Interpret your results
+
+Answer: There are a few ways of doing this you just need to be cautious with the interpretation
+
+See results in stargazer table and compare results for the three models, model 1 & 2 are the same model 3 is different. 
+
+- The base category is being single and non-black.
+
+- Being married and non black leads to 18.9% higher wage than being single and non-black.
+
+- Being single and black results in 24.1% lower wage than being single and non-black.
+
+- Being married and black results in 0.9% higher wage than being single and non-black.
+
+<br>
+```{r,warning=FALSE}
+#4
+# - Option 1
+# As seen in class you can use the * function to create interactions of your dummy variables, when using * you do not need to add the variables alone R does that automatically for you. As in m7
+
+m7<- lm(log(wage)~ educ + exper + tenure + south +urban + married * black, wage2)
+
+# - Option 2
+# The other way is using colon : for the interaction, in which case you do need to add the main effects or main dummy variables, in this example, married and black. 
+
+m8<- lm(log(wage)~ educ + exper + tenure + south + urban + married + black + married : black, wage2)
+
+# When using the options above you need to be careful with the interpretation of the beta coeffient associated with the interaction term, it doesn't compare automatically with the reference group, single and nonblack in this case. The coefficients for the three dummies need to be added in order to get the effect of married and black compared to single and none black. Option 3 does this for you. 
+
+
+# - Option 3
+# create the interaction factor variable before the regression, this creates four categories, married_black(00, 10, 01, 11)
+
+wage2$marital_race <- interaction(wage2$married, wage2$black, sep="")
+
+# then add this factor into the regression and this will include all the categories that you want to investigate, the reference category will be single and non black 00, and the other three will compare to it. 
+
+m9<-lm(log(wage)~ educ + exper + tenure + south + urban + marital_race, wage2)
+
+stargazer(list(m7, m8, m9) ,  type="text", covariate.labels = c("Education", "Experience", "Tenure","South", "Urban", "Married-Non Black","Single-Black", "Married-Black"),
+          dep.var.labels   = "Log(Salary)")
+```
+
+<br>
+
+**Notice that**
+ 
+$\beta_{married}+\beta_{black}+\beta_{married\&black} =$ *Effect of being married and black vs single and non-black.*
+
+*`r round(coef(m7)[7],3)`+ `r round(coef(m7)[8],3)`+ `r round(coef(m7)[9],3)` = `r round((coef(m7)[7]+coef(m7)[8]+coef(m7)[9]),3)`* Same number for $\beta_{married\&black}$ in model 3.
+
+
+

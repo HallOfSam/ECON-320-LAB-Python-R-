@@ -1,0 +1,88 @@
+---
+title: "DGP Example"
+#author: "Paloma Lopezdemesa Moyano"
+date: "`r format(Sys.time(), '%B %Y')`"
+output: 
+  html_document: 
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Data Generating Process 
+
+We start with the DGP, which we have made up. The first equation is the generic form of the data generating process. The second is the specific DGP that has the parameters we have made up for this example.
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+$$y=\beta_0+\beta_1x+u$$
+$$y=5+2x+u$$
+</div>
+<br>
+
+
+*Data Generating Process*
+
+```{r}
+#set the seed to have reproducible results
+set.seed(123)
+#generate de population of x and u normally distributed variables of a million observations and y following the equation below. 
+x<-rnorm(1000000,10,5)
+u<-rnorm(1000000,0,2)
+y<-5+2*x+u
+# Put all this in a dataframe
+data<-data.frame(x,y,u)
+```
+
+Now let's take a sample of the population
+```{r}
+# to take a random sample of rows from a data frame use the function sample in the rows dimension of your dataframe as below.
+sample<-data[sample(nrow(data), 1000), ]
+
+# As a good practice use your smaple data to calculate the estimated betas on your own from the formulas learnt in class. 
+```
+
+Now make a graph of the predicted line and see how it looks 
+type ?geom_smooth in the console
+```{r}
+# The geom_smooth() geometry on ggplot allows you to plot the predicted line of a regression using the method lm that stands for linear model 
+library("ggplot2")
+reg<-lm(y~x, sample )
+sample$yhat<-predict(reg)
+ggplot(sample, aes(x=x , y)) + 
+  geom_point()+
+  geom_line(aes(x, yhat), col=2)
+  geom_smooth(method="lm")+
+  xlab("x") + ylab("y")
+```
+
+
+Next, lets take different numbers of draws from another DGP. If we take 5 draws, we have 5 observations; 10 draws gives us 10 observations, etc.
+```{r}
+### DGP
+set.seed(123) # set the seed so everyone in the class has the same values
+# Let n be the number of draws set at 5 change and increase later
+for (n in c(5, 10, 50, 100, 500, 900)){
+# Let u be the disturbance in the equation 
+u<-rnorm(n, 0, 5)
+# let x be a variable that is normally distributed with mean 1 and sd 2 
+x<-rnorm(n, 1,2)
+beta0<-5
+beta1<-2
+y<-beta0+beta1*x+u
+dat<-data.frame(y,x,u) # put all vector into a data frame becasue ggplot can only be fed with a dataframe
+plot<-ggplot(dat, aes(x=x,y=y))+ # mapping x and y 
+  geom_point(col=4, alpha=.5)+ # scatter plot defining atributes for color and transparency
+  stat_function(fun=function(x){5+2*x}, geom="line", col=2) + # plot the straight line of the population equation
+  ggtitle(paste("A draw of", n, "observations from the population, with the PRF plotted")) # title of the graph
+print(plot) # print the graph 
+}
+```
+
+
+

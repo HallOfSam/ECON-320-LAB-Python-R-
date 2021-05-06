@@ -1,0 +1,134 @@
+---
+title: "Assingment 3 Econ320"
+author: "Saier (Sam) Hu"
+date: "`r format(Sys.time(), '03/28/2020')`"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+#Chunk setup
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50),tidy=TRUE)
+
+# Load the packages that you will need 
+library(tidyverse)
+library(wooldridge)
+library(stargazer)
+library(knitr)
+library(varhandle)
+library(car)
+library(corrplot)
+library(PerformanceAnalytics)
+
+```
+
+# Multicolinearity detection and output presentation {.tabset}
+
+> For this assignmemnt we use the packages: tidyverse, wooldridge, stargazer, car, corrplot and PerformanceAnalitics
+ 
+Using the data gpa1 from the wooldridge package create two new variables in the gpa1 data set  
+
+$$x = 3+ ACT*2$$
+$$z=ACT+2*hsGPA$$
+Create a correlation matrix of colGPA, hsGPA, ACT, x, z, and a correlation matrix graph
+
+This graph is not my favorite graph, it is too busy, but it will do the trick for now. 
+What can you say about the correlation matrix and the graphs?
+
+- We can notice that the variables ACT and x, ACT and z, as well as x and z are all strongly correlated.
+
+> Note: Here go for a cooler graph like corrplot or chart.Correlation. Read about it and implement it. 
+
+## Ugly graph using pairs 
+```{r, message=FALSE}
+
+# Generate the variables x and z as part of the data gpa1
+gpa1$x <- 3+gpa1$ACT*2
+gpa1$z <- gpa1$ACT+2*gpa1$hsGPA
+
+# correlation matrix 
+cormat<-select(gpa1, colGPA, hsGPA, ACT, x, z ) %>% cor()
+round(cormat, 3)
+
+# Correlation graphs (these ones are horrible but they also show the scatter plot)
+pairs(~colGPA+ hsGPA +ACT  +x +z ,data=gpa1, 
+      main="Simple Scatterplot Matrix")
+```
+
+## Other cooler graphs 
+```{r}
+corrplot(cormat, type = "upper", order = "hclust",tl.col = "black", tl.srt = 45)
+dat <- select(gpa1, colGPA, hsGPA, ACT, x, z )
+chart.Correlation(dat, histogram = TRUE, pch = 19)
+```
+
+Run the following three regressions, and show them all together in a nice looking table  
+
+$$colGPA=\beta_0 + \beta_1hsGPA + \beta_2ACT + u $$
+
+$$colGPA=\beta_0 + \beta_1hsGPA + \beta_2ACT + + \beta_3x + \beta_4z + u $$
+$$colGPA=\beta_0 + \beta_1hsGPA + \beta_2ACT + \beta_3age+ \beta_4alcohol + u $$
+
+Make a summary of the second regression, look at it. ( Then comment this code by using #)
+Then make sure that the output of the code for it doesn't show, this is just for you to see how R reacts to the multicolinearity problem. EXPLAIN what happened in the output and why.
+
+- For model 2, the variables x and z are neglected in the regression because they caused multicolinearity problem. In fact, the variables x, z, and ACT are strongly correlated due to the way x and z were created: we created the variable z using a linear combination of ACT and hsGPA; the variable x is created as a function of ACT
+
+Put both results in a nice looking table. 
+
+```{r, results='asis'}
+model1<-lm(colGPA~ hsGPA+ACT,data = gpa1)
+model2<-lm(colGPA~ hsGPA+ACT+x+z, data = gpa1)
+
+#summary of the results to see what happens with model 2 in the summary
+
+#summary(model2)
+
+model3<-lm(colGPA~ hsGPA+ACT+age+alcohol,data = gpa1)
+
+
+```
+
+Show the results for your regressions using the stargazer package
+```{r, message=FALSE, results='asis'}
+#Now put both models in nice looking table 
+stargazer(list(model1, model2, model3), type="html", title= "Determinants of College GPA", align=TRUE,
+          covariate.labels = c("High SchoolGPA","ACT", "x", "z", "age", "alcohol"),
+          column.labels = c("Basic Model", "Model with multicolinearity", "Model Plus"),
+          dep.var.caption  = "College GPA",
+          dep.var.labels   = "Previous Academics")           
+```
+
+# Prove some OLS properties 
+
+Use R to 
+
+* evaluate the vif of model1 and model2. See what happens to model2 when you run the code, fix the code to be able to knit. **Hint: Use # to comment the line of code with the error**
+```{r}
+vif(model1)
+
+#vif(model2)
+```
+
+
+* demonstrate that the residuals of model1 add up to zero. What does that mean? EXPLAIN 
+- This means that the regression line is the line of best fit. The sum of residuals should be always equal to zero for an OLS model that does not pass through the origin: it follows immediately from the first-order condition of the OLS model that  $\sum \hat u_i=0$.
+
+```{r}
+print(paste("Sum of residuals = ", round(sum(resid(model1)),3)))
+
+```
+
+* demonstrate the $R^2$ of a regression of the residuals of model1 on the original regressors must be zero. What does this mean? EXPLAIN
+
+-This means that 0% of the variation in  u^  is explained by the original regressors, which indicates that  u^  and the original regressors are not correlated.
+```{r}
+u=resid(model1)
+
+print(paste("R2 of residual regression with indep var = ", round(summary(lm(u ~ hsGPA+ACT, gpa1))$r.squared, 4)))
+```
+
+
+

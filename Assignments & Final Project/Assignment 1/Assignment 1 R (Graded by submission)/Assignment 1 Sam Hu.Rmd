@@ -1,0 +1,180 @@
+---
+title: "Assignment 1 Econ320"
+author: "Saier (Sam) Hu"
+date: "2021/2/23"
+output: 
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(wooldridge)
+library(AER) # If the package AER doesn't work for you, you can just download the dataset from the files section on Canvas 
+library(knitr)
+library(varhandle)
+data(PSID1982, package="AER") # Or import the dataset 
+```
+
+# Effects of education on wages
+ 
+From the package AER (or import the data), use the dataset PSID1982 (Cross-section data originating from the Panel Study on Income Dynamics, 1982). In this assignment we will use this data to investigate the effect of education on wages for this population. 
+
+Let's first investigate our data and a few relationships in it. This is a little of what I call the motivation part of your regression analysis. This is very simple, you will have to do more involved things in your final project. 
+
+* First, if you are using the package AER type `?PSID1982` in the console so you will see what the variables mean in your help window. If you imported the data using the .csv file you can look at the documentation of the data [here](https://www.rdocumentation.org/packages/AER/versions/1.2-9/topics/PSID1982) 
+
+* Then create these two tables: show the proportion of women and men in the dataset and the proportion of people that reside in a standard metropolitan statistical area ( the name of this variable is smsa).  
+
+* Create a third table showing the cross-reference table for these two variables.  
+```{r}
+# Show the proportion of women and men in the dataset
+prop.table(table(PSID1982$gender))
+
+# Show the proportion of people that reside in a standard metropolitan statistical area
+smsa <- factor(PSID1982$smsa,labels = c("no","yes"))
+prop.table(table(smsa))
+
+## Let's add a cross table 
+kable(prop.table(table(PSID1982$gender,PSID1982$smsa)),digits = 3)
+```
+
+* The following table looks at the correlation between wages, education and experience. 
+* What can you say about these correlations? Do they have the expected sign?
+
+-- The correlations have expected signs. For example, wages and education are positively correlated, which indicates that workers with higher level of education typically have higher wages than those who don't. Additionally, wages and experience have a weakly postive correlation, which indicates that workers with more experience might have a higher wage than those who don't. Also, the correlation between experience and education is weakly negative, suggesting that workers with more educationare are likely to have less working experience because they must spend more time on studying.
+
+```{r}
+cortabe<- cor(PSID1982[,c("wage","education","experience")])
+
+round(cortabe, 3)
+```
+
+What about the average of some variables for the sample, and some statistics by gender.
+
+Here we use the package dplyr, the function `summarise_all()`, `summarise()` to make the calculations, and the functions `pivot_longer()` and `pivot_wider()` to present the tables in a better way. Figure out how to use this functions to get the same format. 
+
+* The first table looks at the averages for the whole sample for wage, education and experience.
+
+* The second table calculates the averages by gender. 
+
+* What can you say about these results? 
+
+-- The level of education obatained by women and men are roughly the same. However, the average working experience and wages between the two groups differ significantly. Also, the correlation between wage and education is higher for women.
+
+* What can you say about the average values for women vs men? 
+
+-- While the average level of education obatained by women and men are roughly the same, the avergae working experience and average wage of men are significantly higher. The reason behind women having lower wages is probably sex/gender discrimination at workplace; moreover, women are required by social norms to take care of family chores and raise kids, which probably explains why the average working experience of women are also less than that of men.
+
+```{r}
+PSID1982 %>%
+  summarize(wage = mean(wage), education = mean(education), experience = mean(experience),.groups = 'drop') %>%
+  round(3) %>%
+  pivot_longer(cols = everything(), names_to = "averages") %>%
+  kable()
+
+PSID1982 %>%
+  group_by(gender) %>%
+  summarize(avgeduc=mean(education),
+            avgexpr=mean(experience),
+            avgwage=mean(wage),
+            cor_wagvseduc=cor(wage,education),.groups = 'drop') %>%
+  pivot_longer(cols = c(avgeduc,avgexpr,avgwage,cor_wagvseduc), names_to = "Stats") %>%
+  pivot_wider(names_from = gender) %>%
+  mutate_if(is.numeric, ~round(., 3)) %>%
+  kable()
+
+```
+
+# Graphs 
+Let's look at those numbers using graphs. 
+```{r}
+
+ggplot(PSID1982 , aes(x=education, y=wage))+
+  geom_point(color="red", alpha=.5 , position=position_jitter(w=0.2))+
+  geom_smooth(method='lm')+ 
+   ggtitle('Wage vs Educ') +
+ xlab('Education') +
+  ylab('Wage')
+
+ggplot(PSID1982 , aes(x=education,y=wage))+
+  geom_point(color="red", alpha=.5)+
+  geom_smooth( )+ 
+  facet_grid(~gender, scales="free")+ ggtitle('Wage vs Educ') + 
+  xlab('Education') +
+  ylab('Wage')
+  
+```
+
+# Simple regression analysis
+
+Now let's use the data to estimate the following equation
+$$ wage = \beta_0 + \beta_1*education + u $$
+
+Estimate this equation using the step by step method learned last class, the method the minimizes SSR and the variance, covariance method. (3 ways first)
+
+### Equation system results: step-by-step
+```{r, results='hold'}
+
+x<-PSID1982$education
+y<-PSID1982$wage
+sumxy=sum((x-mean(x))*(y-mean(y)))
+sumx2=sum((x- mean(x))^2)
+
+# Calculate the coefficients
+(b1<-sumxy/sumx2)
+(b0<-mean(y)-b1*mean(x))  
+```
+
+### Function minimization results 
+
+These are the parameters using this method
+```{r}
+min.SSR <- function(data,par){sum((y-par[1]-(par[2]*x))^2)}
+# Optimizing the function SSR to find the parameters that minimize it. Call the object result
+# The vector par=c(b0,b1) will be replaced but the correct values of b0 and b1 that minimize your function 
+  
+result<-optim(par=c(b0,b1) , fn=min.SSR, data=PSID1982)
+# Retrieves the vector of parameters from the results object, and rounds them to the 3 decimals
+
+result$par
+```
+
+### Covariance , variance method
+Using the `cov(x,y)` and `var(x)` functions in R calculate the $\hat\beta_0, \hat\beta_1$ based on the equation below.
+$$\hat\beta_1=\frac{Cov(x,y)}{Var(x)}$$ 
+$$\hat\beta_0 = \bar{y} - \hat\beta_1 \bar{x}$$
+```{r, results='hold'}
+b0 <- mean(y)-b1*mean(x)
+b1_1 <- cov(x,y)/var(x)
+  
+# see here how the print and paste function work function work
+print(paste("Beta_0=", round(b0,3), sep=" "))
+
+print(paste("Beta_1=", round(b1_1,3), sep=" "))
+
+```
+
+### lm() command 
+
+Finally, use the lm() command to estimate. Save your estimation in an object called regre and show the summary of your model. 
+$$ log(wage) = \beta_0 + \beta_1*education + u $$
+What can you say about this new result? Why is it better to use $log(wages)$?
+What is your interpretation of the coefficients and the $R^2$?
+
+-- The new results have smaller coefficients for x and intercepts.
+
+-- Using the natural logarithm of y can transform unit change to percent change of wages for every one-unit change of education. Thus, logarithmic transformation is a convenient means of transforming a highly skewed variable into a more normalized dataset.
+
+-- The coefficient of intercept denotes the value of log(wage) when the education takes the value 0 (which is not really meaningful because no one would have absolutely no education), while the coefficient of x represents the slope of the regression line: it means that for every one-unit change in education, the wage will increase by 7.17% . The R-squared is the proportion of the variance in the dependent variable that the independent variables explain, which in this case means that 20.8% of y (log(wage)) could be explained by x (education).
+```{r}
+
+(regre<-lm(formula = log(wage)~education, data=PSID1982))
+
+summary(regre)
+```
+
+
+
+
