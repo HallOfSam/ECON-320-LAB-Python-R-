@@ -1,0 +1,194 @@
+---
+title: "Final Research Project"
+author: "Sam (Saier) Hu"
+date: "2020/11/26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+```
+
+
+## Introduction and motivation:
+
+For my final project, I am interested in studying whether introverts consider voting less important than extroverts do. Thus, the sample population will be divided into 2 groups (introvert and extrovert) and for each group the percentage of people who rated at least 4 (we consider this as a degree of "importance") in response to the question "How important do you consider voting (scale 1-5)" will be calculated and compared. The hypothesis testing for this question will be conducted using percentages because the variable of interest is a categorical variable (A similar study will be conducted while we we select "GPA" as the question of interest). I don't think that being an introvert makes one consider voting less important (similarly, I expect the GPA would be similar among introverts and extroverts); thus, my null hypothesis for the first question is that: the percentage of extroverts who rated at least 4 for the importance of voting is the same as that of introverts.
+
+H0: $p1 - p2=0$,
+H1: $p1 - p2 \neq 0$.
+
+For the GPA question, we want to see if there is a difference between the means of the two groups:
+
+H0: $\mu_1 - \mu_2=0$,
+H1: $\mu_1 - \mu_2\neq 0$.
+
+Theoretically, an extrovert is more likely to engage in social interactions than introverts. As psychologist Elaine Houston suggests, “in social situations, extrovert and introvert personalities display very different behaviors. Extroverts show a preference for seeking, engaging in, and enjoying social interactions, whereas introverts tend to be reserved and withdrawn in social settings – often preferring to avoid social situations altogether” (Houston).
+
+However, when it comes to considering how important voting is, things might be different. Introverts might avoid the practice of voting, but they may not necessarily consider voting less important than extroverts do. According to a 2016 report by U.S. Census Bureau, about 10.6% of the people in the United States (including voters and non-voters) do not think voting can change things (File). Meanwhile, according to a research conducted by Pew Research Center, about 23%. of the people in the U.S. (including voters and non-voters) do not vote. It would be interesting to observe whether being an introvert or an extrovert affects one's view on voting given that the discrepancy might stem from the fact that there are some introverts who think voting is important but do not vote.
+
+Therefore, I chose the question "Do you identify as an introvert or extrovert?" to make 2 groups and the questions "How important do you consider voting?" and  to conduct my research. Mean and standard deviations (for the both groups) of responses to the latter question will be calculated to verify my hypothesis and indicate how spread out the data is. Additionally, a similar analysis will be conducted using the same question to make groups and "GPA" as question of interest.
+
+## Load data
+```{r, results=TRUE}
+rm(list=ls())
+
+load("C:/Users/DELL/Desktop/Emory/Fall 2020/ECON 220/Lab/Assignment 2/Econ220DataF20_ano.Rdata")
+
+Prodata <- data.frame(Econ220DataF20_ano)
+```
+
+
+## What are my data sets and analysis of data and trends
+
+For this project, I will need to incorporate 3 variables (q17, q20, GPA) into my project. The variables do not require cleaning after inspecting. Also, I will rename the q17 and q20 variables to make their names self-explanatory. Q17 (which indicates that one is an extrovert or introvert) will be renamed as "Trait", while Q20 (which indicates the level of importance one associates voting with with scale 1-5) will be renamed as "VoteImportance".
+
+Moreover, the variable "Trait" will be used to make two groups (introverts and extroverts); then percentages of people who rate at least 3 concerning their responses to the question "How important do you consider voting"(scale 1-5) will be calculated. I expect that the means for the two groups wIll be very similar. Additionally,the mean for both of the group will be calculated and compared when we use "GPA" as question of interest.
+
+In terms of visualization, tables will be used to present the summary statistics. A bar plot will be used to show the distribution of ratings among the two groups (since VoteImportance is a categorical variable), while histograms will be used to present the distribution of GPA among introverts and extroverts.
+
+
+-Data cleaning and choosing the variables of interest
+```{r, results=FALSE}
+# Changing Variables' Names
+Prodata <- Prodata%>%rename(Trait = q17, VoteImportance = q20)
+
+# Data Cleaning of Variables: the following tables suggest that there is no need for data cleaning.
+table(Prodata$Trait)
+table(Prodata$VoteImportance)
+table(Prodata$GPA)
+
+```
+
+
+-Select The Variables Of Interest
+```{r}
+#data selection
+Mydata<-Prodata %>% select(Trait, VoteImportance, GPA)
+
+```
+
+-Presenting Summary Statistics and Distributions
+
+First we want to show the basic summary statistics of the extroverts and introverts, respectively. According to what will be shown in the following graphs, the shapes of the distributions for the two groups are very similar, while the distribution for the introvert group is more spread-out (larger variance) when choosing GPA as the variable of interest, and the distribution for the extrovert group is more spread-out (larger variance) when choosing VoteImportance as the variable of interest.
+```{r}
+#Summary statistics for extroverts
+Mydata %>%filter(Trait=="Extrovert")%>%summary()
+
+
+#Summary statistics for introverts
+Mydata %>%filter(Trait=="Introvert")%>%summary()
+
+
+```
+a. What we know from the graph below: the bar plot tells us that for both extroverts and introverts, more than half of the people rate at least 4 on the importance of rating. The distribution is left-skewed. Also, the violin plot shows that the distributions of ratings among the two groupsare very similar in terms of shape. Median will probably be a good measure that summarizes the two variables
+
+```{r}
+
+#mean and SD of Rating on the importance of voting for extroverts and introverts
+Mydata %>% 
+  group_by(Trait)%>% 
+  summarize(AvgRate=mean(VoteImportance),SDGPA=sd(VoteImportance),.groups = 'drop') %>% 
+  kable( col.names=c("Trait", "Average Rating", "SD of Rating")) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+#Using Bar plots to show the distribution of ratings on the importance of voting among extroverts and introverts
+Mydata %>%
+  group_by(Trait) %>%
+  ggplot(mapping=aes(x=VoteImportance,y=VoteImportance, fill=Trait)) +
+  geom_col()+
+  ylab("Frequency") + xlab("Degree of Importance")+
+  ggtitle("Distribution of Ratings on the Importance of voting") +
+   theme(plot.title = element_text(hjust = 0.5))
+
+#Using violin plots to show the distribution of ratings on the importance of voting among extroverts and introverts
+ggplot(data=Mydata, aes(y=VoteImportance, x=Trait, fill=Trait, color=Trait))+
+  geom_violin( alpha=0.5)+
+   scale_color_manual(values = c("purple", "green"))+
+   scale_fill_manual(values = c("purple", "green"))+
+labs(title="Distribution of ratings on the importance of voting among extroverts and introverts") + ylab("Rating") + xlab("Trait")+
+   theme(plot.title = element_text(hjust = 0.5)) + theme_classic()
+
+```
+
+
+-Using Histograms to Show the GPA distribution among Introverts And Extroverts
+
+b. The table and histogram below show that the mean GPA for both group is around 3.5-3.6 and the standard deviation of GPA for extroverts is greater. Also, while the shapes of distribution for both group look very similar, the distribution for the introvert group is a bit more spread-out (larger SD, and thus larger variance). Sample mean will probably summarize the variable well.
+```{r}
+
+#Summary statistics
+summary(Mydata$GPA)
+
+#mean and SD of GPA for extroverts and introverts
+Mydata %>% 
+  group_by(Trait)%>% 
+  summarize(AvgGPA=mean(GPA),SDGPA=sd(GPA),.groups = 'drop') %>% 
+  kable( col.names=c("Trait", "Average GPA", "SD of GPA")) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+
+#histogram for introverts' and extroverts' GPA distribution
+
+voteRating <- Mydata$VoteImportance
+trait <- Mydata$Trait
+gpa <- Mydata$GPA
+
+ggplot(Mydata, aes(gpa, fill=trait))+
+geom_histogram(aes(y=..density..),breaks=seq(0,5,by=0.1), alpha=0.8) + geom_vline(xintercept = mean(gpa), linetype="dotted", color = "darkgreen", size=1.5) + 
+   geom_density(alpha=.4)+xlab("GPA")+
+  ggtitle("Distribution of GPA Among Extroverts and Introverts") 
+
+#violin plot for introverts' and extroverts' GPA distribution
+ggplot(data=Mydata, aes(y=GPA, x=Trait, fill=Trait, color=Trait))+
+  geom_violin( alpha=0.5)+
+   scale_color_manual(values = c("purple", "green"))+
+   scale_fill_manual(values = c("purple", "green"))+
+labs(title="Distribution of GPA") + ylab("GPA") + xlab("Trait")+
+   theme(plot.title = element_text(hjust = 0.5)) + theme_classic()
+```
+
+
+
+## Testing and Analysis of Confidnece Interval
+
+-a. For the first question, since VoteImportance is a categorical variable, we want to investigate whether percentages of people who rate at least 4 on the importance of voting between extroverts and introverts are different. According to the t-test, the difference in percentages between the two groups is 0.69-0.75=-0.06, and we fail to reject the null hypothesis at 95% level of confidence (since $p = 0.4949 > \alpha =0.05$). In other words, there is no difference between the degrees of importance that extroverts attribute to voting and introverts attribute to voting. 
+```{r}
+Mydata$aboveFour <- (Mydata$VoteImportance>=4)
+
+#t-test: percentages of people who rate at least 4 on the importance of voting among extroverts and introverts
+t.test(aboveFour ~ trait, data = Mydata)
+```
+-b. For the second question, we want to investigate whether the mean GPA between extroverts and introverts are different. According to the t-test, the difference in mean GPA between the two groups is 3.63-3.51=0.12, and we fail to reject the null hypothesis at 95% level of confidence (since $p = 0.1382 > \alpha =0.05$). In other words, there is no difference in the mean GPA between introverts and extroverts. 
+```{r}
+t.test(GPA ~ trait, data = Mydata)
+```
+
+## Conclusion, Summary, and Possible Improvements
+
+-Summary and Findings: I chose the variable trait as grouping question and the variables VoteImportance and GPA as question of interest. Ten I used tables and graphs (Bar plot, hitogram, and violin plot) to show that summary statistics and distributions of the two variables.For the first question, I discovered that, if we choose 4 as a threshold for the denotation of "important", then there is no difference between the degrees of importance that extroverts attribute to voting and introverts attribute to voting, at 95% level of confidence. For the second question, I found out that there is no difference in the mean GPA between introverts and extroverts, at 95% level of confidence.
+
+-Shortcomings: One thing we should note is that when the survey is filled, the degree of of importance for the rating question is not described literally. Thus, I had to choose an arbitrary standard (VoteImportance=3) as a threshold to represent an extent equivalent to "important". A selection of different numbers as threshold might yield a different finding regarding the first question. A possible improvement to make is to describe the degree of importance literally along with numerical values.
+
+-Is the result surprising? 
+No. The result coincides with my speculation from the beginning. 
+
+-Will anything be different if we use a larger sample size or different population?
+If the sample size is larger, the conclusion is likely to be the same because according to CLT, our sample is large enough. However, for a different population (for example, if we had surveyed UGA students or the general public instead of Emory students), the results for the first question might have been different because some institutions or individuals are more concerned about political discourses than others.
+
+-If we do the project again, what will I change?
+I will probably ask more questions that require quantitative answers (i.e. ones that yield numerical variables) in the survey, because sometimes it is very difficult to study categorical variables; for example, I had to choose an arbitrary standard (VoteImportance=3) as a threshold to represent an extent equivalent to "important" because the degree of of importance for the rating question is not described literally.
+
+
+
+## References:
+
+Houston, Elaine. “Introvert vs Extrovert: A Look at the Spectrum and Psychology”. https://positivepsychology.com/introversion-extroversion-spectrum/#:~:text=In%20social%20situations%2C%20extrovert%20and,to%20avoid%20social%20situations%20altogether.
+
+Pew Research Center. “Who Votes, Who Doesn’t, and Why”. https://www.pewresearch.org/politics/2006/10/18/who-votes-who-doesnt-and-why/ 
+
+
+File, Thomas. “Characteristics of Voters in the Presidential Election of 2016”. https://www.census.gov/library/publications/2018/demo/p20-582.html. 
